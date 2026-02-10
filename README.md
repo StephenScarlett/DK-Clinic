@@ -145,3 +145,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For support or questions, please open an issue in the GitHub repository.
+
+## Images
+<img width="1915" height="1021" alt="image" src="https://github.com/user-attachments/assets/294d67f6-6875-4894-b166-b4a3c6eeb48f" />

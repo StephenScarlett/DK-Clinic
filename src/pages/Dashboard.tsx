@@ -1,52 +1,92 @@
 import { Link } from 'react-router-dom'
+import { useDashboardOverview, useSystemAlerts, useRecentActivity } from '../hooks/useDashboard'
 
 function Dashboard() {
-  const stats = [
-    { label: 'Total Patients', value: 245, color: '#9bc9d4', icon: '👥', bg: 'bg-medical-500' },
-    { label: 'Total Doctors', value: 12, color: '#9bc9d4', icon: '👨‍⚕️', bg: 'bg-medical-400' },
-    { label: "Today's Appointments", value: 18, color: '#7bb5c2', icon: '📅', bg: 'bg-medical-300' },
-    { label: 'Pending Appointments', value: 7, color: '#dac0bc', icon: '⏳', bg: 'bg-coral-400' },
-  ]
+  // Fetch dashboard data using React Query
+  const { data: overview, isLoading } = useDashboardOverview()
+  const { data: alerts = [] } = useSystemAlerts()
+  const { data: recentActivity } = useRecentActivity()
 
-  const featuredDoctors = [
-    { 
-      id: 1, 
-      name: 'Dr. Sarah Johnson', 
-      specialization: 'Cardiologist', 
-      rating: 4.9, 
-      patients: 120,
-      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face'
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-8 min-h-screen bg-clinical-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <div className="text-gray-600 text-lg">Loading dashboard...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Fallback data for featured doctors when overview is not available
+  const featuredDoctors = overview?.featuredDoctors || [
+    {
+      id: 1,
+      name: "Dr. Sarah Johnson",
+      specialization: "Cardiology",
+      image: "/doctor1.jpg",
+      rating: 4.9,
+      experience: "15 years"
     },
-    { 
-      id: 2, 
-      name: 'Dr. Michael Chen', 
-      specialization: 'Pediatrician', 
-      rating: 4.8, 
-      patients: 95,
-      image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face'
+    {
+      id: 2,
+      name: "Dr. Michael Chen",
+      specialization: "Pediatrics",
+      image: "/doctor2.jpg",
+      rating: 4.8,
+      experience: "12 years"
     },
-    { 
-      id: 3, 
-      name: 'Dr. Emily Rodriguez', 
-      specialization: 'Dermatologist', 
-      rating: 4.9, 
-      patients: 88,
-      image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face'
+    {
+      id: 3,
+      name: "Dr. Emily Rodriguez",
+      specialization: "Dermatology",
+      image: "/doctor3.jpg",
+      rating: 4.9,
+      experience: "10 years"
     }
   ]
+
+  const stats = overview ? [
+    { 
+      label: 'Total Patients', 
+      value: overview.patients.total, 
+      color: '#9bc9d4', 
+      icon: '👥', 
+      bg: 'bg-medical-500',
+      subtext: `${overview.patients.active} active`
+    },
+    { 
+      label: 'Total Doctors', 
+      value: overview.doctors.total, 
+      color: '#9bc9d4', 
+      icon: '👨‍⚕️', 
+      bg: 'bg-medical-400',
+      subtext: `${overview.doctors.available} available`
+    },
+    { 
+      label: "Today's Appointments", 
+      value: overview.appointments.today, 
+      color: '#7bb5c2', 
+      icon: '📅', 
+      bg: 'bg-medical-300',
+      subtext: `${overview.appointments.thisWeek} this week`
+    },
+    { 
+      label: 'Pending Appointments', 
+      value: overview.appointments.pending, 
+      color: '#dac0bc', 
+      icon: '⏳', 
+      bg: 'bg-coral-400',
+      subtext: `${overview.appointments.confirmed} confirmed`
+    },
+  ] : []
 
   const quickActions = [
     { name: 'Book Appointment', icon: '📅', color: 'bg-medical-500', link: '/book-appointment', desc: 'Schedule new patient visit' },
     { name: 'Add Patient', icon: '👤', color: 'bg-medical-400', link: '/patients', desc: 'Register new patient' },
     { name: 'View Reports', icon: '📊', color: 'bg-medical-300', link: '/appointments', desc: 'Check clinic analytics' },
     { name: 'Manage Doctors', icon: '👨‍⚕️', color: 'bg-coral-400', link: '/doctors', desc: 'Update staff information' }
-  ]
-
-  const recentAppointments = [
-    { id: 1, patient: 'John Doe', doctor: 'Dr. Smith', time: '09:00 AM', status: 'Confirmed', priority: 'Normal' },
-    { id: 2, patient: 'Jane Wilson', doctor: 'Dr. Johnson', time: '10:30 AM', status: 'Pending', priority: 'High' },
-    { id: 3, patient: 'Mike Brown', doctor: 'Dr. Davis', time: '02:00 PM', status: 'Confirmed', priority: 'Normal' },
-    { id: 4, patient: 'Sarah Miller', doctor: 'Dr. Wilson', time: '03:30 PM', status: 'Confirmed', priority: 'Urgent' },
   ]
 
   return (
@@ -102,6 +142,9 @@ function Dashboard() {
               <div>
                 <div className="text-4xl font-bold mb-2">{stat.value}</div>
                 <div className="text-white/90 font-medium">{stat.label}</div>
+                {stat.subtext && (
+                  <div className="text-white/70 text-sm mt-1">{stat.subtext}</div>
+                )}
               </div>
               <div className="text-5xl opacity-80 group-hover:scale-110 transition-transform duration-300">{stat.icon}</div>
             </div>
@@ -176,39 +219,88 @@ function Dashboard() {
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold text-gray-800 flex items-center">
             <span className="w-2 h-8 bg-medical-500 rounded-full mr-4"></span>
-            Recent Appointments
+            Today's Appointments
           </h2>
           <Link to="/appointments" className="text-medical-600 hover:text-medical-700 font-semibold">View All →</Link>
         </div>
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
           <div className="space-y-0">
-            {recentAppointments.map((appointment, index) => (
-              <div key={appointment.id} className={`p-6 ${index !== recentAppointments.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-medical-50 transition-all duration-200 flex items-center justify-between group`}>
-                <div className="flex items-center space-x-4">
-                  <div className={`w-3 h-3 rounded-full ${
-                    appointment.priority === 'Urgent' ? 'bg-coral-500' :
-                    appointment.priority === 'High' ? 'bg-coral-400' :
-                    'bg-medical-500'
-                  }`}></div>
-                  <div>
-                    <div className="font-semibold text-gray-800 group-hover:text-medical-700 transition-colors duration-200">{appointment.patient}</div>
-                    <div className="text-gray-600 text-sm">{appointment.doctor}</div>
+            {recentActivity?.todayAppointments.map((appointment, index) => (
+              <div key={appointment.id} className={`p-6 hover:bg-gray-50 transition-colors duration-200 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-medical-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                      📅
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{appointment.patient_name}</h3>
+                      <p className="text-gray-600">{appointment.doctor_name}</p>
+                      <p className="text-sm text-gray-500">{appointment.time}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      appointment.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
+                      appointment.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                      appointment.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {appointment.status}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      appointment.type === 'Emergency' ? 'bg-red-100 text-red-800' :
+                      appointment.type === 'Surgery' ? 'bg-purple-100 text-purple-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {appointment.type}
+                    </span>
                   </div>
                 </div>
-                <div className="text-gray-600 font-medium">{appointment.time}</div>
-                <div className={`px-4 py-2 rounded-xl text-sm font-semibold ${
-                  appointment.status === 'Confirmed' ? 'bg-medical-100 text-medical-800' :
-                  appointment.status === 'Pending' ? 'bg-coral-100 text-coral-800' :
-                  appointment.status === 'Completed' ? 'bg-medical-100 text-medical-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {appointment.status}
+              </div>
+            )) || (
+              <div className="p-12 text-center text-gray-500">
+                <div className="text-4xl mb-4">📅</div>
+                <p>No appointments scheduled for today</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* System Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-6">
+          <h2 className="text-3xl font-bold text-gray-800 flex items-center">
+            <span className="w-2 h-8 bg-red-500 rounded-full mr-4"></span>
+            System Alerts
+          </h2>
+          <div className="space-y-4">
+            {alerts.map((alert) => (
+              <div key={alert.id} className={`p-4 rounded-xl border-l-4 ${
+                alert.type === 'warning' ? 'bg-yellow-50 border-yellow-400' :
+                alert.type === 'error' ? 'bg-red-50 border-red-400' :
+                'bg-blue-50 border-blue-400'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-800">{alert.title}</h3>
+                    <p className="text-gray-600">{alert.message}</p>
+                  </div>
+                  {alert.count && (
+                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                      alert.type === 'warning' ? 'bg-yellow-200 text-yellow-800' :
+                      alert.type === 'error' ? 'bg-red-200 text-red-800' :
+                      'bg-blue-200 text-blue-800'
+                    }`}>
+                      {alert.count}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

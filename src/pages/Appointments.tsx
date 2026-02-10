@@ -1,93 +1,16 @@
 import { useState } from 'react'
-
-interface Appointment {
-  id: number
-  patientName: string
-  doctorName: string
-  date: string
-  time: string
-  status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled'
-  reason: string
-  type?: 'Consultation' | 'Follow-up' | 'Emergency' | 'Surgery' | 'Checkup'
-  duration?: number
-  priority?: 'High' | 'Medium' | 'Low'
-}
+import { useAppointments, useUpdateAppointmentStatus, useDeleteAppointment, useAppointmentStats } from '../hooks/useAppointments'
 
 function Appointments() {
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: 1,
-      patientName: 'John Doe',
-      doctorName: 'Dr. Smith',
-      date: '2024-01-15',
-      time: '09:00',
-      status: 'Confirmed',
-      reason: 'Regular checkup',
-      type: 'Checkup',
-      duration: 30,
-      priority: 'Medium'
-    },
-    {
-      id: 2,
-      patientName: 'Jane Wilson',
-      doctorName: 'Dr. Johnson',
-      date: '2024-01-15',
-      time: '10:30',
-      status: 'Pending',
-      reason: 'Skin consultation',
-      type: 'Consultation',
-      duration: 45,
-      priority: 'High'
-    },
-    {
-      id: 3,
-      patientName: 'Mike Brown',
-      doctorName: 'Dr. Davis',
-      date: '2024-01-15',
-      time: '14:00',
-      status: 'Confirmed',
-      reason: 'Child vaccination',
-      type: 'Follow-up',
-      duration: 20,
-      priority: 'Medium'
-    },
-    {
-      id: 4,
-      patientName: 'Sarah Miller',
-      doctorName: 'Dr. Wilson',
-      date: '2024-01-16',
-      time: '15:30',
-      status: 'Confirmed',
-      reason: 'Heart examination',
-      type: 'Consultation',
-      duration: 60,
-      priority: 'High'
-    },
-    {
-      id: 5,
-      patientName: 'Tom Anderson',
-      doctorName: 'Dr. Smith',
-      date: '2024-01-14',
-      time: '11:00',
-      status: 'Completed',
-      reason: 'Blood pressure check',
-      type: 'Checkup',
-      duration: 15,
-      priority: 'Low'
-    },
-    {
-      id: 6,
-      patientName: 'Lisa Johnson',
-      doctorName: 'Dr. Rodriguez',
-      date: '2024-01-16',
-      time: '09:30',
-      status: 'Cancelled',
-      reason: 'Dental examination',
-      type: 'Consultation',
-      duration: 30,
-      priority: 'Medium'
-    }
-  ])
+  // Fetch appointments data using React Query
+  const { data: appointments = [], isLoading, error, refetch } = useAppointments()
+  const { data: stats = { total: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0, today: 0, thisWeek: 0, byType: {}, byPriority: {} }, isLoading: statsLoading } = useAppointmentStats()
+  
+  // Mutations
+  const updateStatusMutation = useUpdateAppointmentStatus()
+  const deleteAppointmentMutation = useDeleteAppointment()
+
+
 
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterDate, setFilterDate] = useState<string>('')
@@ -185,18 +108,7 @@ function Appointments() {
     setViewMode('all')
   }
 
-  const getStatsData = () => {
-    const today = new Date().toISOString().split('T')[0]
-    return {
-      total: appointments.length,
-      today: appointments.filter(apt => apt.date === today).length,
-      pending: appointments.filter(apt => apt.status === 'Pending').length,
-      confirmed: appointments.filter(apt => apt.status === 'Confirmed').length,
-      completed: appointments.filter(apt => apt.status === 'Completed').length
-    }
-  }
 
-  const stats = getStatsData()
 
   return (
     <div className="p-8 space-y-8 min-h-screen bg-clinical-50">

@@ -1,120 +1,101 @@
 import { useState } from 'react'
-
-interface Doctor {
-  id: number
-  name: string
-  email: string
-  phone: string
-  specialization: string
-  experience: number
-  availability: string
-  rating?: number
-  patients?: number
-  image?: string
-  status?: 'Available' | 'Busy' | 'Off Duty'
-}
+import { useDoctors, useCreateDoctor, useDeleteDoctor, useUpdateDoctorStatus, useDoctorStats } from '../hooks/useDoctors'
+import { NewDoctor } from '../services/doctorService'
 
 function Doctors() {
-  const [doctors, setDoctors] = useState<Doctor[]>([
-    {
-      id: 1,
-      name: 'Dr. John Smith',
-      email: 'john.smith@clinic.com',
-      phone: '+1 234-567-8901',
-      specialization: 'Cardiology',
-      experience: 15,
-      availability: 'Monday-Friday 9AM-5PM',
-      rating: 4.8,
-      patients: 248,
-      image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face',
-      status: 'Available'
-    },
-    {
-      id: 2,
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@clinic.com',
-      phone: '+1 234-567-8902',
-      specialization: 'Dermatology',
-      experience: 8,
-      availability: 'Tuesday-Saturday 10AM-6PM',
-      rating: 4.9,
-      patients: 196,
-      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
-      status: 'Available'
-    },
-    {
-      id: 3,
-      name: 'Dr. Michael Davis',
-      email: 'michael.davis@clinic.com',
-      phone: '+1 234-567-8903',
-      specialization: 'Pediatrics',
-      experience: 12,
-      availability: 'Monday-Friday 8AM-4PM',
-      rating: 4.7,
-      patients: 302,
-      image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face',
-      status: 'Busy'
-    }
-  ])
+  // Fetch doctors data using React Query
+  const { data: doctors = [], isLoading, error, refetch } = useDoctors()
+  const { data: stats = { total: 0, available: 0, busy: 0, offDuty: 0, specializations: {} }, isLoading: statsLoading } = useDoctorStats()
+  
+  // Mutations
+  const createDoctorMutation = useCreateDoctor()
+  const deleteDoctorMutation = useDeleteDoctor()
+  const updateStatusMutation = useUpdateDoctorStatus()
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterSpecialization, setFilterSpecialization] = useState('')
-  const [newDoctor, setNewDoctor] = useState<Omit<Doctor, 'id'>>({
+  const [newDoctor, setNewDoctor] = useState<Omit<NewDoctor, 'id' | 'created_at' | 'updated_at' | 'status' | 'rating'>>({
     name: '',
     email: '',
     phone: '',
     specialization: '',
     experience: 0,
-    availability: ''
+    availability: []
   })
 
-  const specializations = [
-    'Cardiology',
-    'Dermatology',
-    'Pediatrics',
-    'Orthopedics',
-    'Neurology',
-    'Gynecology',
-    'Psychiatry',
-    'General Medicine',
-    'Surgery',
-    'Emergency Medicine',
-    'Oncology',
-    'Endocrinology'
+  // Get unique specializations from the available doctors for filtering
+  const specializations = [...new Set(doctors.map(doctor => doctor.specialization))]
+
+  // Available days
+  const availableDays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
   ]
 
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase())
+                         doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doctor.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSpecialization = !filterSpecialization || doctor.specialization === filterSpecialization
     return matchesSearch && matchesSpecialization
   })
 
-  const handleAddDoctor = (e: React.FormEvent) => {
+  const handleAddDoctor = async (e: React.FormEvent) => {
     e.preventDefault()
-    const doctor: Doctor = {
-      ...newDoctor,
-      id: Math.max(...doctors.map(d => d.id), 0) + 1,
-      rating: 4.5,
-      patients: 0,
-      status: 'Available'
+    
+    try {
+      await createDoctorMutation.mutateAsync(newDoctor)
+      
+      // Reset form
+      setNewDoctor({
+        name: '',
+        email: '',
+        phone: '',
+        specialization: '',
+        experience: 0,
+        availability: []
+      })
+      setShowAddForm(false)
+    } catch (error) {
+      console.error('Failed to create doctor:', error)
+      // You can add toast notification here
     }
-    setDoctors([...doctors, doctor])
-    setNewDoctor({
-      name: '',
-      email: '',
-      phone: '',
-      specialization: '',
-      experience: 0,
-      availability: ''
-    })
-    setShowAddForm(false)
   }
 
-  const handleDeleteDoctor = (id: number) => {
-    setDoctors(doctors.filter(d => d.id !== id))
+  const handleDeleteDoctor = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this doctor? This will also delete all their appointments.')) {
+      try {
+        await deleteDoctorMutation.mutateAsync(id)
+      } catch (error) {
+        console.error('Failed to delete doctor:', error)
+        // You can add toast notification here
+      }
+    }
+  }
+
+  const handleStatusChange = async (id: string, status: 'Available' | 'Busy' | 'Off Duty') => {
+    try {
+      await updateStatusMutation.mutateAsync({ id, status })
+    } catch (error) {
+      console.error('Failed to update doctor status:', error)
+      // You can add toast notification here
+    }
+  }
+
+  const handleAvailabilityChange = (day: string) => {
+    setNewDoctor(prev => ({
+      ...prev,
+      availability: prev.availability.includes(day)
+        ? prev.availability.filter(d => d !== day)
+        : [...prev.availability, day]
+    }))
   }
 
   const getStatusColor = (status: string) => {
@@ -142,6 +123,37 @@ function Doctors() {
       'Endocrinology': '⚗️'
     }
     return icons[specialization] || '👨‍⚕️'
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-8 min-h-screen bg-clinical-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <div className="text-gray-600 text-lg">Loading doctors...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8 min-h-screen bg-clinical-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">❌</div>
+          <div className="text-red-600 text-lg mb-4">Failed to load doctors</div>
+          <div className="text-gray-600 mb-4">{error.message}</div>
+          <button 
+            onClick={() => refetch()}
+            className="bg-medical-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-medical-600 transition-all duration-300"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

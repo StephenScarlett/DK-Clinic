@@ -1,61 +1,23 @@
 import { useState } from 'react'
-
-interface Patient {
-  id: number
-  name: string
-  email: string
-  phone: string
-  dateOfBirth: string
-  gender: string
-  address: string
-  lastVisit?: string
-  status?: 'Active' | 'Inactive'
-}
+import { usePatients, useCreatePatient, useDeletePatient, usePatientStats } from '../hooks/usePatients'
+import { NewPatient } from '../services/patientService'
 
 function Patients() {
-  const [patients, setPatients] = useState<Patient[]>([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@email.com',
-      phone: '+1 234-567-8901',
-      dateOfBirth: '1985-05-15',
-      gender: 'Male',
-      address: '123 Main St, City, State 12345',
-      lastVisit: '2024-01-10',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      name: 'Jane Wilson',
-      email: 'jane.wilson@email.com',
-      phone: '+1 234-567-8902',
-      dateOfBirth: '1990-08-22',
-      gender: 'Female',
-      address: '456 Oak Ave, City, State 12345',
-      lastVisit: '2024-01-08',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      name: 'Mike Brown',
-      email: 'mike.brown@email.com',
-      phone: '+1 234-567-8903',
-      dateOfBirth: '1978-12-03',
-      gender: 'Male',
-      address: '789 Pine Rd, City, State 12345',
-      lastVisit: '2023-12-15',
-      status: 'Inactive'
-    }
-  ])
+  // Fetch patients data using React Query
+  const { data: patients = [], isLoading, error, refetch } = usePatients()
+  const { data: stats = { total: 0, active: 0, inactive: 0 }, isLoading: statsLoading } = usePatientStats()
+  
+  // Mutations
+  const createPatientMutation = useCreatePatient()
+  const deletePatientMutation = useDeletePatient()
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [newPatient, setNewPatient] = useState<Omit<Patient, 'id'>>({
+  const [newPatient, setNewPatient] = useState<Omit<NewPatient, 'id' | 'created_at' | 'updated_at' | 'status'>>({
     name: '',
     email: '',
     phone: '',
-    dateOfBirth: '',
+    date_of_birth: '',
     gender: '',
     address: ''
   })
@@ -66,28 +28,37 @@ function Patients() {
     patient.phone.includes(searchTerm)
   )
 
-  const handleAddPatient = (e: React.FormEvent) => {
+  const handleAddPatient = async (e: React.FormEvent) => {
     e.preventDefault()
-    const patient: Patient = {
-      ...newPatient,
-      id: Math.max(...patients.map(p => p.id), 0) + 1,
-      lastVisit: new Date().toISOString().split('T')[0],
-      status: 'Active'
+    
+    try {
+      await createPatientMutation.mutateAsync(newPatient)
+      
+      // Reset form
+      setNewPatient({
+        name: '',
+        email: '',
+        phone: '',
+        date_of_birth: '',
+        gender: '',
+        address: ''
+      })
+      setShowAddForm(false)
+    } catch (error) {
+      console.error('Failed to create patient:', error)
+      // You can add toast notification here
     }
-    setPatients([...patients, patient])
-    setNewPatient({
-      name: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      gender: '',
-      address: ''
-    })
-    setShowAddForm(false)
   }
 
-  const handleDeletePatient = (id: number) => {
-    setPatients(patients.filter(p => p.id !== id))
+  const handleDeletePatient = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this patient?')) {
+      try {
+        await deletePatientMutation.mutateAsync(id)
+      } catch (error) {
+        console.error('Failed to delete patient:', error)
+        // You can add toast notification here
+      }
+    }
   }
 
   const calculateAge = (dateOfBirth: string) => {
@@ -99,6 +70,37 @@ function Patients() {
       age--
     }
     return age
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-8 min-h-screen bg-clinical-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <div className="text-gray-600 text-lg">Loading patients...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8 min-h-screen bg-clinical-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">❌</div>
+          <div className="text-red-600 text-lg mb-4">Failed to load patients</div>
+          <div className="text-gray-600 mb-4">{error.message}</div>
+          <button 
+            onClick={() => refetch()}
+            className="bg-medical-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-medical-600 transition-all duration-300"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -138,10 +140,10 @@ function Patients() {
           </div>
           <div className="flex items-center space-x-4">
             <div className="bg-medical-100 px-4 py-2 rounded-xl">
-              <span className="text-medical-700 font-medium">Total: {patients.length}</span>
+              <span className="text-medical-700 font-medium">Total: {stats.total}</span>
             </div>
             <div className="bg-medical-100 px-4 py-2 rounded-xl">
-              <span className="text-medical-700 font-medium">Active: {patients.filter(p => p.status === 'Active').length}</span>
+              <span className="text-medical-700 font-medium">Active: {stats.active}</span>
             </div>
           </div>
         </div>
@@ -195,8 +197,8 @@ function Patients() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Date of Birth</label>
                 <input
                   type="date"
-                  value={newPatient.dateOfBirth}
-                  onChange={(e) => setNewPatient({ ...newPatient, dateOfBirth: e.target.value })}
+                  value={newPatient.date_of_birth}
+                  onChange={(e) => setNewPatient({ ...newPatient, date_of_birth: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
                   required
                 />
@@ -231,15 +233,17 @@ function Patients() {
               <button 
                 type="button" 
                 onClick={() => setShowAddForm(false)}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors duration-200 font-medium"
+                disabled={createPatientMutation.isPending}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button 
                 type="submit" 
-                className="px-6 py-3 bg-medical-500 text-white rounded-xl hover:bg-medical-600 transition-all duration-200 font-semibold shadow-lg"
+                disabled={createPatientMutation.isPending}
+                className="px-6 py-3 bg-medical-500 text-white rounded-xl hover:bg-medical-600 transition-all duration-200 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Patient
+                {createPatientMutation.isPending ? 'Adding...' : 'Add Patient'}
               </button>
             </div>
           </form>
@@ -294,13 +298,13 @@ function Patients() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm">
-                      <div className="font-medium text-gray-800">{calculateAge(patient.dateOfBirth)} years</div>
+                      <div className="font-medium text-gray-800">{calculateAge(patient.date_of_birth)} years</div>
                       <div className="text-gray-600">{patient.gender}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-600">
-                      {patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'Never'}
+                      {patient.created_at ? new Date(patient.created_at).toLocaleDateString() : 'Never'}
                     </div>
                   </td>
                   <td className="px-6 py-4">

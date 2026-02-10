@@ -1,30 +1,20 @@
-import { useState } from 'react'
-
-interface Patient {
-  id: number
-  name: string
-  email: string
-  phone: string
-}
-
-interface Doctor {
-  id: number
-  name: string
-  specialization: string
-  availability: string[]
-  image?: string
-  rating?: number
-}
-
-interface TimeSlot {
-  time: string
-  available: boolean
-}
+import { useState, useEffect } from 'react'
+import { usePatients, useCreatePatient } from '../hooks/usePatients'
+import { useDoctors } from '../hooks/useDoctors'
+import { useCreateAppointment, useAvailableTimeSlots } from '../hooks/useAppointments'
+import { NewAppointment } from '../services/appointmentService'
+import { NewPatient } from '../services/patientService'
 
 function BookAppointment() {
-  const [formData, setFormData] = useState({
-    patientId: '',
-    doctorId: '',
+  // Fetch data using React Query hooks
+  const { data: patients = [], isLoading: patientsLoading } = usePatients()
+  const { data: doctors = [], isLoading: doctorsLoading } = useDoctors()
+  const createPatientMutation = useCreatePatient()
+  const createAppointmentMutation = useCreateAppointment()
+
+  const [formData, setFormData] = useState<Omit<NewAppointment, 'id' | 'created_at' | 'updated_at' | 'status'>>({
+    patient_id: '',
+    doctor_id: '',
     date: '',
     time: '',
     reason: '',
@@ -35,155 +25,97 @@ function BookAppointment() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState('')
   const [showNewPatientForm, setShowNewPatientForm] = useState(false)
-  const [newPatient, setNewPatient] = useState({
+  const [newPatient, setNewPatient] = useState<Omit<NewPatient, 'id' | 'created_at' | 'updated_at' | 'status'>>({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    date_of_birth: '',
+    gender: '',
+    address: ''
   })
-
-  // Sample data - in a real app, this would come from your state management or API
-  const patients: Patient[] = [
-    { id: 1, name: 'John Doe', email: 'john.doe@email.com', phone: '+1 234-567-8901' },
-    { id: 2, name: 'Jane Wilson', email: 'jane.wilson@email.com', phone: '+1 234-567-8902' },
-    { id: 3, name: 'Mike Brown', email: 'mike.brown@email.com', phone: '+1 234-567-8903' },
-    { id: 4, name: 'Sarah Miller', email: 'sarah.miller@email.com', phone: '+1 234-567-8904' },
-    { id: 5, name: 'Tom Anderson', email: 'tom.anderson@email.com', phone: '+1 234-567-8905' }
-  ]
-
-  const doctors: Doctor[] = [
-    { 
-      id: 1, 
-      name: 'Dr. John Smith', 
-      specialization: 'Cardiology', 
-      availability: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face',
-      rating: 4.8
-    },
-    { 
-      id: 2, 
-      name: 'Dr. Sarah Johnson', 
-      specialization: 'Dermatology', 
-      availability: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
-      rating: 4.9
-    },
-    { 
-      id: 3, 
-      name: 'Dr. Michael Davis', 
-      specialization: 'Pediatrics', 
-      availability: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face',
-      rating: 4.7
-    },
-    { 
-      id: 4, 
-      name: 'Dr. Emily Wilson', 
-      specialization: 'Orthopedics', 
-      availability: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
-      rating: 4.6
-    }
-  ]
 
   const appointmentTypes = ['Consultation', 'Follow-up', 'Emergency', 'Surgery', 'Checkup']
   const priorityLevels = ['Low', 'Medium', 'High']
 
-  const generateTimeSlots = (_selectedDate: string, _doctorId: string): TimeSlot[] => {
-    const slots: TimeSlot[] = []
-    const baseSlots = [
-      '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-      '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-      '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-      '17:00', '17:30'
-    ]
-    
-    // Simulate some taken slots
-    const takenSlots = ['09:30', '11:00', '14:00', '15:30']
-    
-    baseSlots.forEach(time => {
-      slots.push({
-        time,
-        available: !takenSlots.includes(time)
-      })
-    })
+  // Get available time slots
+  const { data: availableSlots = [], refetch: refetchSlots } = useAvailableTimeSlots(
+    formData.doctor_id, 
+    formData.date
+  )
 
-    return slots
+  // Refetch slots when doctor or date changes
+  useEffect(() => {
+    if (formData.doctor_id && formData.date) {
+      refetchSlots()
+    }
+  }, [formData.doctor_id, formData.date, refetchSlots])
+
+  // Loading states
+  if (patientsLoading || doctorsLoading) {
+    return (
+      <div className="p-8 min-h-screen bg-clinical-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <div className="text-gray-600 text-lg">Loading appointment form...</div>
+        </div>
+      </div>
+    )
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
-    setSubmitMessage('')
-
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      setIsSubmitting(true)
+      setSubmitMessage('')
       
-      // In a real app, you would make an API call here
-      console.log('Booking appointment:', formData)
+      await createAppointmentMutation.mutateAsync(formData)
       
-      setSubmitMessage('✅ Appointment booked successfully! Confirmation details have been sent via email.')
+      setSubmitMessage('✅ Appointment booked successfully!')
+      
+      // Reset form
       setFormData({
-        patientId: '',
-        doctorId: '',
+        patient_id: '',
+        doctor_id: '',
         date: '',
         time: '',
         reason: '',
         type: 'Consultation',
         priority: 'Medium'
       })
+      
     } catch (error) {
+      console.error('Failed to book appointment:', error)
       setSubmitMessage('❌ Error booking appointment. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const handleNewPatientSubmit = (e: React.FormEvent) => {
+  const handleNewPatientSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, you would add this patient to your database
-    console.log('Adding new patient:', newPatient)
-    setNewPatient({ name: '', email: '', phone: '' })
-    setShowNewPatientForm(false)
-    setSubmitMessage('✅ New patient added successfully!')
-  }
-
-  const selectedDoctor = doctors.find(doc => doc.id === parseInt(formData.doctorId))
-  const selectedPatient = patients.find(patient => patient.id === parseInt(formData.patientId))
-  const availableTimeSlots = formData.date && formData.doctorId 
-    ? generateTimeSlots(formData.date, formData.doctorId) 
-    : []
-
-  const getSpecializationIcon = (specialization: string) => {
-    const icons: { [key: string]: string } = {
-      'Cardiology': '❤️',
-      'Dermatology': '🧴',
-      'Pediatrics': '👶',
-      'Orthopedics': '🦴',
-      'Neurology': '🧠',
-      'Gynecology': '🌸',
-      'Surgery': '⚕️'
+    
+    try {
+      await createPatientMutation.mutateAsync(newPatient)
+      
+      setNewPatient({
+        name: '',
+        email: '',
+        phone: '',
+        date_of_birth: '',
+        gender: '',
+        address: ''
+      })
+      setShowNewPatientForm(false)
+      setSubmitMessage('✅ New patient added successfully!')
+    } catch (error) {
+      console.error('Failed to add patient:', error)
+      setSubmitMessage('❌ Error adding patient. Please try again.')
     }
-    return icons[specialization] || '👨‍⚕️'
   }
 
-  const getDayFromDate = (dateStr: string) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const date = new Date(dateStr)
-    return days[date.getDay()]
-  }
-
-  const isDoctorAvailable = (dateStr: string, doctorId: string) => {
-    if (!dateStr || !doctorId) return true
-    const doctor = doctors.find(d => d.id === parseInt(doctorId))
-    if (!doctor) return false
-    const dayName = getDayFromDate(dateStr)
-    return doctor.availability.includes(dayName)
-  }
+  const selectedDoctor = doctors.find(doc => doc.id === formData.doctor_id)
+  const selectedPatient = patients.find(patient => patient.id === formData.patient_id)
 
   return (
     <div className="p-8 space-y-8 min-h-screen bg-clinical-50">
@@ -217,7 +149,7 @@ function BookAppointment() {
             
             {showNewPatientForm && (
               <form onSubmit={handleNewPatientSubmit} className="mb-6 p-4 bg-gray-50 rounded-xl">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input
                     type="text"
                     placeholder="Full Name"
@@ -242,6 +174,33 @@ function BookAppointment() {
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-500 focus:border-transparent"
                     required
                   />
+                  <input
+                    type="date"
+                    placeholder="Date of Birth"
+                    value={newPatient.date_of_birth}
+                    onChange={(e) => setNewPatient({...newPatient, date_of_birth: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-500 focus:border-transparent"
+                    required
+                  />
+                  <select
+                    value={newPatient.gender}
+                    onChange={(e) => setNewPatient({...newPatient, gender: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Address"
+                    value={newPatient.address}
+                    onChange={(e) => setNewPatient({...newPatient, address: e.target.value})}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-500 focus:border-transparent"
+                    required
+                  />
                 </div>
                 <div className="flex space-x-2">
                   <button type="submit" className="px-4 py-2 bg-medical-500 text-white rounded-lg hover:bg-medical-600 text-sm">
@@ -259,9 +218,8 @@ function BookAppointment() {
             )}
 
             <select
-              name="patientId"
-              value={formData.patientId}
-              onChange={handleInputChange}
+              value={formData.patient_id}
+              onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
               required
             >
@@ -285,28 +243,17 @@ function BookAppointment() {
                 <div 
                   key={doctor.id}
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                    parseInt(formData.doctorId) === doctor.id 
+                    formData.doctor_id === doctor.id 
                       ? 'border-medical-500 bg-medical-50' 
                       : 'border-gray-200 hover:border-medical-300'
                   }`}
-                  onClick={() => setFormData(prev => ({ ...prev, doctorId: doctor.id.toString() }))}
+                  onClick={() => setFormData(prev => ({ ...prev, doctor_id: doctor.id }))}
                 >
                   <div className="flex items-center space-x-3">
-                    <img 
-                      src={doctor.image || 'https://via.placeholder.com/60x60/14b8a6/FFFFFF?text=Dr'} 
-                      alt={doctor.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/60x60/14b8a6/FFFFFF?text=Dr'
-                      }}
-                    />
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-800">{doctor.name}</div>
-                      <div className="flex items-center space-x-1 text-sm text-gray-600">
-                        <span>{getSpecializationIcon(doctor.specialization)}</span>
-                        <span>{doctor.specialization}</span>
-                      </div>
-                      <div className="text-sm text-gray-500">⭐ {doctor.rating}</div>
+                    <div className="text-2xl">👨‍⚕️</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{doctor.name}</h3>
+                      <p className="text-sm text-gray-600">{doctor.specialization}</p>
                     </div>
                   </div>
                 </div>
@@ -314,256 +261,157 @@ function BookAppointment() {
             </div>
           </div>
 
-          {/* Appointment Details */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+          {/* Appointment Details Form */}
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 space-y-6">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center">
               <span className="mr-3">📅</span>
               Appointment Details
             </h2>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
-                  <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleInputChange}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
-                    required
-                  />
-                  {formData.date && formData.doctorId && !isDoctorAvailable(formData.date, formData.doctorId) && (
-                    <p className="text-red-600 text-sm mt-1">⚠️ Doctor not available on this day</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Appointment Type *</label>
-                  <select
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
-                    required
-                  >
-                    {appointmentTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
-                  <select
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
-                  >
-                    {priorityLevels.map((priority) => (
-                      <option key={priority} value={priority}>{priority}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Time Slots */}
-              {formData.date && formData.doctorId && isDoctorAvailable(formData.date, formData.doctorId) && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Available Time Slots *</label>
-                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                    {availableTimeSlots.map((slot) => (
-                      <button
-                        key={slot.time}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, time: slot.time }))}
-                        disabled={!slot.available}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                          formData.time === slot.time
-                            ? 'bg-medical-500 text-white'
-                            : slot.available
-                            ? 'border border-gray-300 text-gray-700 hover:border-medical-500 hover:text-medical-700'
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        {slot.time}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Reason for Visit *</label>
-                <textarea
-                  name="reason"
-                  rows={4}
-                  value={formData.reason}
-                  onChange={handleInputChange}
-                  placeholder="Please describe the reason for this appointment, symptoms, or any specific concerns..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200 resize-none"
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
                   required
                 />
               </div>
-
-              <div className="flex space-x-4">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting || !isDoctorAvailable(formData.date, formData.doctorId)}
-                  className="flex-1 bg-medical-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-medical-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl"
+              
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+                <select
+                  value={formData.time}
+                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
+                  required
+                  disabled={!formData.date || !formData.doctor_id}
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Booking...
-                    </span>
+                  <option value="">Select time</option>
+                  {formData.date && formData.doctor_id ? (
+                    availableSlots.length > 0 ? (
+                      availableSlots.map((slot) => (
+                        <option key={slot.time} value={slot.time} disabled={!slot.available}>
+                          {slot.time} {!slot.available ? '(Taken)' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>No available slots</option>
+                    )
                   ) : (
-                    'Book Appointment'
+                    <option value="" disabled>Select date and doctor first</option>
                   )}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setFormData({
-                    patientId: '',
-                    doctorId: '',
-                    date: '',
-                    time: '',
-                    reason: '',
-                    type: 'Consultation',
-                    priority: 'Medium'
-                  })}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors duration-200 font-medium"
-                >
-                  Clear Form
-                </button>
+                </select>
               </div>
-            </form>
-          </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Type</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
+                  required
+                >
+                  {appointmentTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200"
+                  required
+                >
+                  {priorityLevels.map(priority => (
+                    <option key={priority} value={priority}>{priority}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Reason for Visit</label>
+              <textarea
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-medical-500 focus:border-transparent transition-colors duration-200 h-32 resize-none"
+                placeholder="Please describe the reason for your visit..."
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting || !formData.patient_id || !formData.doctor_id || !formData.date || !formData.time}
+              className="w-full bg-medical-500 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-medical-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Booking...</span>
+                </div>
+              ) : (
+                'Book Appointment'
+              )}
+            </button>
+
+            {submitMessage && (
+              <div className={`p-4 rounded-xl text-center font-medium ${
+                submitMessage.includes('✅') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                {submitMessage}
+              </div>
+            )}
+          </form>
         </div>
 
         {/* Summary Sidebar */}
         <div className="space-y-6">
-          {/* Appointment Summary */}
-          {(selectedPatient || selectedDoctor || formData.date || formData.time) && (
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 sticky top-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                <span className="mr-3">📋</span>
-                Appointment Summary
-              </h3>
-              <div className="space-y-4">
-                {selectedPatient && (
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-medical-400 rounded-full flex items-center justify-center text-white font-bold">
-                      {selectedPatient.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-800">{selectedPatient.name}</div>
-                      <div className="text-sm text-gray-600">{selectedPatient.email}</div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedDoctor && (
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
-                    <img 
-                      src={selectedDoctor.image || 'https://via.placeholder.com/40x40/14b8a6/FFFFFF?text=Dr'} 
-                      alt={selectedDoctor.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/40x40/14b8a6/FFFFFF?text=Dr'
-                      }}
-                    />
-                    <div>
-                      <div className="font-semibold text-gray-800">{selectedDoctor.name}</div>
-                      <div className="text-sm text-gray-600">{selectedDoctor.specialization}</div>
-                    </div>
-                  </div>
-                )}
-
-                {formData.date && (
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <div className="font-semibold text-gray-800">📅 {new Date(formData.date).toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}</div>
-                  </div>
-                )}
-
-                {formData.time && (
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <div className="font-semibold text-gray-800">🕐 {formData.time}</div>
-                  </div>
-                )}
-
-                {formData.type && formData.type !== 'Consultation' && (
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <div className="font-semibold text-gray-800">📋 {formData.type}</div>
-                  </div>
-                )}
-
-                {formData.priority && formData.priority !== 'Medium' && (
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <div className={`font-semibold ${
-                      formData.priority === 'High' ? 'text-red-600' :
-                      formData.priority === 'Low' ? 'text-medical-600' :
-                      'text-gray-800'
-                    }`}>
-                      ⚡ {formData.priority} Priority
-                    </div>
-                  </div>
-                )}
-
-                {formData.reason && (
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <div className="text-sm text-gray-600 font-medium">Reason:</div>
-                    <div className="text-gray-800">{formData.reason}</div>
-                  </div>
-                )}
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <span className="mr-2">📋</span>
+              Summary
+            </h3>
+            
+            {selectedPatient && (
+              <div className="mb-4 pb-4 border-b border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">Patient</h4>
+                <div className="text-sm text-gray-600">
+                  <p className="font-medium">{selectedPatient.name}</p>
+                  <p>{selectedPatient.email}</p>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Tips */}
-          <div className="bg-medical-500 rounded-2xl p-6 text-white">
-            <h3 className="text-lg font-bold mb-4">📝 Booking Tips</h3>
-            <ul className="space-y-2 text-sm text-medical-100">
-              <li>• Book at least 24 hours in advance</li>
-              <li>• Arrive 15 minutes early for your appointment</li>
-              <li>• Bring relevant medical documents</li>
-              <li>• Check your insurance coverage beforehand</li>
-              <li>• Cancel at least 2 hours before if needed</li>
-            </ul>
+            )}
+            
+            {selectedDoctor && (
+              <div className="mb-4 pb-4 border-b border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-2">Doctor</h4>
+                <div className="text-sm text-gray-600">
+                  <p className="font-medium">{selectedDoctor.name}</p>
+                  <p>{selectedDoctor.specialization}</p>
+                </div>
+              </div>
+            )}
+            
+            {formData.date && formData.time && (
+              <div className="text-sm text-gray-600">
+                <p><span className="font-semibold">Date:</span> {new Date(formData.date).toLocaleDateString()}</p>
+                <p><span className="font-semibold">Time:</span> {formData.time}</p>
+                <p><span className="font-semibold">Type:</span> {formData.type}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Success/Error Message */}
-      {submitMessage && (
-        <div className={`fixed bottom-8 right-8 p-6 rounded-xl shadow-2xl max-w-md transition-all duration-300 ${
-          submitMessage.includes('Error') 
-            ? 'bg-red-100 border border-red-200 text-red-800' 
-            : 'bg-medical-100 border border-medical-200 text-medical-800'
-        }`}>
-          <div className="flex items-start space-x-3">
-            <div className="flex-1">
-              <div className="font-semibold mb-1">
-                {submitMessage.includes('Error') ? 'Booking Failed' : 'Successfully Booked!'}
-              </div>
-              <div className="text-sm">{submitMessage}</div>
-            </div>
-            <button 
-              onClick={() => setSubmitMessage('')}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

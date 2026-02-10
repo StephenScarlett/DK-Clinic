@@ -11,7 +11,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <div className="min-h-screen bg-clinical-50">
+        <div className="min-h-screen bg-gradient-to-br from-healthcare-50 via-warm-gray-50 to-vibrant-teal-50">
           <Layout>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

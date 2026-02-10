@@ -111,7 +111,7 @@ function Appointments() {
 
 
   return (
-    <div className="p-8 space-y-8 min-h-screen bg-clinical-50">
+    <div className="p-8 space-y-8 min-h-screen bg-warm-gray-50">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
         <div className="flex items-center space-x-4">

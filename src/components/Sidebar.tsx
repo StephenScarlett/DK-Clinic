@@ -56,7 +56,7 @@ function Sidebar() {
                   flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 group relative overflow-hidden
                   ${isActive 
                     ? 'bg-medical-700 text-white shadow-md' 
-                    : 'text-medical-200 hover:text-white hover:bg-medical-700/60'
+                    : 'text-medical-200 hover:text-healthcare-600 hover:bg-healthcare-50/20'
                   }
                 `}
               >

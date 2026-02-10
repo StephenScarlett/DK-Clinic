@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4FCCD6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2C9AA3;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#B8E6EA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7DD3DB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer orbital rings -->
+  <ellipse cx="60" cy="60" rx="42" ry="9" fill="none" stroke="url(#ringGradient)" stroke-width="2" opacity="0.6" transform="rotate(-15 60 60)"/>
+  <ellipse cx="60" cy="60" rx="48" ry="11" fill="none" stroke="url(#ringGradient)" stroke-width="1.8" opacity="0.4" transform="rotate(15 60 60)"/>
+  <ellipse cx="60" cy="60" rx="36" ry="7.5" fill="none" stroke="url(#ringGradient)" stroke-width="3" opacity="0.8" transform="rotate(45 60 60)"/>
+  
+  <!-- Main diamond shape -->
+  <path d="M60 36 L84 60 L60 84 L36 60 Z" fill="url(#diamondGradient)" stroke="#2C9AA3" stroke-width="2"/>
+  
+  <!-- Letter D -->
+  <text x="60" y="67" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">D</text>
+</svg>

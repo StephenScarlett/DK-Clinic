@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import Sidebar from './Sidebar'
+import TopNav from './TopNav'
 import { useRealtimeUpdates } from '../hooks/useRealtime'
 
 interface LayoutProps {
@@ -11,9 +11,9 @@ function Layout({ children }: LayoutProps) {
   useRealtimeUpdates()
 
   return (
-    <div className="flex min-h-screen bg-clinical-100">
-      <Sidebar />
-      <main className="flex-1 ml-64 min-h-screen overflow-x-hidden">
+    <div className="min-h-screen bg-warm-gray-50">
+      <TopNav />
+      <main className="min-h-screen">
         {children}
       </main>
     </div>

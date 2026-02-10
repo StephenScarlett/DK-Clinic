@@ -6,7 +6,7 @@ export type NewDoctor = Database['public']['Tables']['doctors']['Insert']
 export type DoctorUpdate = Database['public']['Tables']['doctors']['Update']
 
 // Mock data for development mode
-const mockDoctors: Doctor[] = [
+const defaultMockDoctors: Doctor[] = [
   {
     id: '1',
     name: 'Dr. Sarah Johnson',
@@ -51,6 +51,20 @@ const mockDoctors: Doctor[] = [
   }
 ]
 
+// Get doctors from localStorage or use defaults
+const getMockDoctors = (): Doctor[] => {
+  if (typeof window === 'undefined') return defaultMockDoctors
+  const stored = localStorage.getItem('dk-clinic-doctors')
+  return stored ? JSON.parse(stored) : defaultMockDoctors
+}
+
+// Save doctors to localStorage
+const saveMockDoctors = (doctors: Doctor[]) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('dk-clinic-doctors', JSON.stringify(doctors))
+  }
+}
+
 export const doctorService = {
   /**
    * Get all doctors from the database
@@ -60,7 +74,7 @@ export const doctorService = {
       if (isDevelopmentMode) {
         // Return mock data in development mode
         await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API delay
-        return [...mockDoctors]
+        return getMockDoctors()
       }
       
       if (!supabase) throw new Error('Supabase not configured')
@@ -79,7 +93,7 @@ export const doctorService = {
     } catch (error) {
       console.error('Error fetching doctors:', error)
       // Fallback to mock data on error
-      return [...mockDoctors]
+      return getMockDoctors()
     }
   },
 
@@ -90,7 +104,8 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Get by ID in development mode', { id })
-      const doctor = mockDoctors.find(d => d.id === id)
+      const doctors = getMockDoctors()
+      const doctor = doctors.find(d => d.id === id)
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 300))
@@ -123,16 +138,18 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Create in development mode', { doctor })
+      const doctors = getMockDoctors()
       const newDoctor: Doctor = {
         ...doctor,
-        id: (mockDoctors.length + 1).toString(),
+        id: Date.now().toString(),
         status: doctor.status || 'Available',
         rating: doctor.rating || 4.5,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
       
-      mockDoctors.push(newDoctor)
+      doctors.push(newDoctor)
+      saveMockDoctors(doctors)
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -165,19 +182,21 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Update in development mode', { id, updates })
-      const doctorIndex = mockDoctors.findIndex(d => d.id === id)
+      const doctors = getMockDoctors()
+      const doctorIndex = doctors.findIndex(d => d.id === id)
       
       if (doctorIndex === -1) {
         throw new Error('Doctor not found')
       }
       
       const updatedDoctor = {
-        ...mockDoctors[doctorIndex],
+        ...doctors[doctorIndex],
         ...updates,
         updated_at: new Date().toISOString()
       }
       
-      mockDoctors[doctorIndex] = updatedDoctor
+      doctors[doctorIndex] = updatedDoctor
+      saveMockDoctors(doctors)
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -210,13 +229,15 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Delete in development mode', { id })
-      const doctorIndex = mockDoctors.findIndex(d => d.id === id)
+      const doctors = getMockDoctors()
+      const doctorIndex = doctors.findIndex(d => d.id === id)
       
       if (doctorIndex === -1) {
         throw new Error('Doctor not found')
       }
       
-      mockDoctors.splice(doctorIndex, 1)
+      doctors.splice(doctorIndex, 1)
+      saveMockDoctors(doctors)
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -246,7 +267,7 @@ export const doctorService = {
     if (isDevelopmentMode) {
       console.log('Doctor Service: Search in development mode', { query })
       const searchTerm = query.toLowerCase()
-      const results = mockDoctors.filter(doctor =>
+      const results = getMockDoctors().filter(doctor =>
         doctor.name.toLowerCase().includes(searchTerm) ||
         doctor.specialization.toLowerCase().includes(searchTerm) ||
         doctor.email.toLowerCase().includes(searchTerm)
@@ -279,7 +300,7 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Get by specialization in development mode', { specialization })
-      const results = mockDoctors
+      const results = getMockDoctors()
         .filter(doctor => doctor.specialization === specialization)
         .sort((a, b) => a.name.localeCompare(b.name))
       
@@ -310,7 +331,7 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Get by status in development mode', { status })
-      const results = mockDoctors
+      const results = getMockDoctors()
         .filter(doctor => doctor.status === status)
         .sort((a, b) => a.name.localeCompare(b.name))
       
@@ -341,7 +362,7 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Get available for day in development mode', { day })
-      const results = mockDoctors
+      const results = getMockDoctors()
         .filter(doctor => doctor.availability.includes(day) && doctor.status === 'Available')
         .sort((a, b) => a.name.localeCompare(b.name))
       
@@ -379,7 +400,7 @@ export const doctorService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Doctor Service: Get stats in development mode')
-      const stats = mockDoctors.reduce(
+      const stats = getMockDoctors().reduce(
         (acc, doctor) => {
           acc.total++
           

@@ -6,16 +6,16 @@ export type NewPatient = Database['public']['Tables']['patients']['Insert']
 export type PatientUpdate = Database['public']['Tables']['patients']['Update']
 
 // Mock data for development mode
-const mockPatients: Patient[] = [
+const defaultMockPatients: Patient[] = [
   {
     id: '1',
     name: 'John Doe',
     email: 'john.doe@email.com',
     phone: '+1 (555) 123-4567',
-    date_of_birth: '1990-01-15',
+    age: 34,
     gender: 'Male',
     address: '123 Main St, Anytown, USA',
-    status: 'Active',
+    status: 'active',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -24,10 +24,10 @@ const mockPatients: Patient[] = [
     name: 'Jane Smith',
     email: 'jane.smith@email.com',
     phone: '+1 (555) 123-4568',
-    date_of_birth: '1985-05-20',
+    age: 28,
     gender: 'Female',
     address: '456 Oak Ave, Another City, USA',
-    status: 'Active',
+    status: 'active',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -36,14 +36,28 @@ const mockPatients: Patient[] = [
     name: 'Mike Johnson',
     email: 'mike.johnson@email.com',
     phone: '+1 (555) 123-4569',
-    date_of_birth: '1978-11-30',
+    age: 45,
     gender: 'Male',
     address: '789 Pine St, Some Town, USA',
-    status: 'Active',
+    status: 'active',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
 ]
+
+// Get patients from localStorage or use defaults
+const getMockPatients = (): Patient[] => {
+  if (typeof window === 'undefined') return defaultMockPatients
+  const stored = localStorage.getItem('dk-clinic-patients')
+  return stored ? JSON.parse(stored) : defaultMockPatients
+}
+
+// Save patients to localStorage
+const saveMockPatients = (patients: Patient[]) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('dk-clinic-patients', JSON.stringify(patients))
+  }
+}
 
 export const patientService = {
   /**
@@ -54,7 +68,7 @@ export const patientService = {
       if (isDevelopmentMode) {
         // Return mock data in development mode
         await new Promise(resolve => setTimeout(resolve, 400)) // Simulate API delay
-        return [...mockPatients]
+        return getMockPatients()
       }
       
       if (!supabase) throw new Error('Supabase not configured')
@@ -73,7 +87,7 @@ export const patientService = {
     } catch (error) {
       console.error('Error fetching patients:', error)
       // Fallback to mock data on error
-      return [...mockPatients]
+      return getMockPatients()
     }
   },
 
@@ -85,7 +99,8 @@ export const patientService = {
       if (isDevelopmentMode) {
         // Return mock data in development mode
         await new Promise(resolve => setTimeout(resolve, 300))
-        return mockPatients.find(p => p.id === id) || null
+        const patients = getMockPatients()
+        return patients.find(p => p.id === id) || null
       }
       
       if (!supabase) throw new Error('Supabase not configured')
@@ -109,7 +124,8 @@ export const patientService = {
     } catch (error) {
       console.error('Error fetching patient:', error)
       // Fallback to mock data
-      return mockPatients.find(p => p.id === id) || null
+      const patients = getMockPatients()
+      return patients.find(p => p.id === id) || null
     }
   },
 
@@ -121,14 +137,16 @@ export const patientService = {
       if (isDevelopmentMode) {
         // Simulate creating patient in development mode
         await new Promise(resolve => setTimeout(resolve, 600))
+        const patients = getMockPatients()
         const newPatient: Patient = {
           id: Date.now().toString(),
           ...patient,
-          status: patient.status || 'Active',
+          status: patient.status || 'active',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
-        mockPatients.push(newPatient)
+        patients.push(newPatient)
+        saveMockPatients(patients)
         return newPatient
       }
       
@@ -138,7 +156,7 @@ export const patientService = {
         .from('patients')
         .insert([{
           ...patient,
-          status: patient.status || 'Active'
+          status: patient.status || 'active'
         }])
         .select()
         .single()
@@ -162,19 +180,21 @@ export const patientService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Patient Service: Update in development mode', { id, updates })
-      const patientIndex = mockPatients.findIndex(p => p.id === id)
+      const patients = getMockPatients()
+      const patientIndex = patients.findIndex(p => p.id === id)
       
       if (patientIndex === -1) {
         throw new Error('Patient not found')
       }
       
       const updatedPatient = {
-        ...mockPatients[patientIndex],
+        ...patients[patientIndex],
         ...updates,
         updated_at: new Date().toISOString()
       }
       
-      mockPatients[patientIndex] = updatedPatient
+      patients[patientIndex] = updatedPatient
+      saveMockPatients(patients)
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -207,13 +227,15 @@ export const patientService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Patient Service: Delete in development mode', { id })
-      const patientIndex = mockPatients.findIndex(p => p.id === id)
+      const patients = getMockPatients()
+      const patientIndex = patients.findIndex(p => p.id === id)
       
       if (patientIndex === -1) {
         throw new Error('Patient not found')
       }
       
-      mockPatients.splice(patientIndex, 1)
+      patients.splice(patientIndex, 1)
+      saveMockPatients(patients)
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -243,7 +265,7 @@ export const patientService = {
     if (isDevelopmentMode) {
       console.log('Patient Service: Search in development mode', { query })
       const searchTerm = query.toLowerCase()
-      const results = mockPatients.filter(patient =>
+      const results = getMockPatients().filter(patient =>
         patient.name.toLowerCase().includes(searchTerm) ||
         patient.email.toLowerCase().includes(searchTerm) ||
         patient.phone.includes(searchTerm)
@@ -276,7 +298,7 @@ export const patientService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Patient Service: Get by status in development mode', { status })
-      const results = mockPatients
+      const results = getMockPatients()
         .filter(patient => patient.status === status)
         .sort((a, b) => a.name.localeCompare(b.name))
       
@@ -311,7 +333,7 @@ export const patientService = {
     // Development mode: Use mock data
     if (isDevelopmentMode) {
       console.log('Patient Service: Get stats in development mode')
-      const stats = mockPatients.reduce(
+      const stats = getMockPatients().reduce(
         (acc, patient) => {
           acc.total++
           if (patient.status === 'Active') {

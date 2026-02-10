@@ -7,57 +7,83 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Medical Blue Palette (Primary) - Soft Milky Medical Blue
-        'medical': {
-          50: '#fdfefe',
-          100: '#f7fbfc',
-          200: '#eaf5f7',
-          300: '#d6ecf0',
-          400: '#bcdde5',
-          500: '#9bc9d4',
-          600: '#7bb5c2',
-          700: '#5ea1b0',
-          800: '#4a8694',
-          900: '#3b6b78',
+        // Primary Healthcare Blues - Modern and Professional
+        'healthcare': {
+          50: '#f0f9ff',
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#0ea5e9',
+          600: '#0284c7',
+          700: '#0369a1',
+          800: '#075985',
+          900: '#0c4a6e',
         },
-        // Sage Green Palette (Secondary) - Soft Milky Medical Green
-        'sage': {
-          50: '#fdfefd',
-          100: '#f8faf8',
-          200: '#eff4f0',
-          300: '#e1eae3',
-          400: '#ced9d1',
-          500: '#b5c4b8',
-          600: '#9cafa0',
-          700: '#849a88',
-          800: '#6b8570',
-          900: '#566b5a',
+        // Vibrant Teal - For Online Support & Services
+        'vibrant-teal': {
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
         },
-        // Soft Coral (Accent) - Muted Medical Coral
-        'coral': {
-          50: '#fefefd',
-          100: '#fcfaf9',
-          200: '#f7f1f0',
-          300: '#f0e5e3',
-          400: '#e6d5d2',
-          500: '#dac0bc',
-          600: '#cdaba6',
-          700: '#c09691',
-          800: '#a37f7a',
-          900: '#876964',
+        // Medical Purple - For Dental & Surgery
+        'medical-purple': {
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
+          500: '#a855f7',
+          600: '#9333ea',
+          700: '#7c3aed',
+          800: '#6b21a8',
+          900: '#581c87',
         },
-        // Clinical Gray (Neutral)
-        'clinical': {
-          50: '#fefefe',
-          100: '#fdfdfd',
-          200: '#fafafa',
-          300: '#f7f7f7',
-          400: '#f1f1f1',
-          500: '#e5e5e5',
-          600: '#d1d1d1',
-          700: '#a3a3a3',
-          800: '#737373',
-          900: '#525252',
+        // Bright Orange - For Emergency & Booking
+        'bright-orange': {
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
+        },
+        // Success Green - For Confirmations
+        'success-green': {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+        },
+        // Warm Gray - Modern Neutral
+        'warm-gray': {
+          50: '#fafaf9',
+          100: '#f5f5f4',
+          200: '#e7e5e4',
+          300: '#d6d3d1',
+          400: '#a8a29e',
+          500: '#78716c',
+          600: '#57534e',
+          700: '#44403c',
+          800: '#292524',
+          900: '#1c1917',
         }
       },
       fontFamily: {

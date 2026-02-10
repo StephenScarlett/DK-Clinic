@@ -3,21 +3,29 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// Debug logging
+console.log('🔍 Environment variables loaded:')
+console.log('VITE_SUPABASE_URL:', supabaseUrl)
+console.log('VITE_SUPABASE_ANON_KEY:', supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'undefined')
+console.log('VITE_APP_MODE:', import.meta.env.VITE_APP_MODE)
+
 // Check if Supabase is configured
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseKey && supabaseUrl !== 'your_supabase_project_url')
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseKey && supabaseUrl !== 'your_supabase_project_url' && supabaseKey !== 'your_supabase_anon_key')
 
 // Development mode flag
 export const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development' || !isSupabaseConfigured
 
-// Create Supabase client only if configured, otherwise use null
+// Create Supabase client
 export const supabase = isSupabaseConfigured 
   ? createClient(supabaseUrl, supabaseKey)
   : null
 
 // If not configured, log helpful message
 if (!isSupabaseConfigured) {
-  console.log('📝 Supabase not configured - running in development mode with mock data')
-  console.log('💡 To use real Supabase: Update your .env file with valid VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
+  console.log('📝 Supabase not configured - running in development mode with localStorage')
+  console.log('💡 To use Supabase: Update your .env file with valid VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
+} else {
+  console.log('✅ Supabase configured successfully')
 }
 
 // Database types will be generated later
@@ -30,10 +38,10 @@ export type Database = {
           name: string
           email: string
           phone: string
-          date_of_birth: string
-          gender: string
+          age: number
+          gender: 'Male' | 'Female' | 'Other'
           address: string
-          status: 'Active' | 'Inactive'
+          status: 'active' | 'inactive'
           created_at: string
           updated_at: string
         }
@@ -42,10 +50,10 @@ export type Database = {
           name: string
           email: string
           phone: string
-          date_of_birth: string
-          gender: string
+          age: number
+          gender: 'Male' | 'Female' | 'Other'
           address: string
-          status?: 'Active' | 'Inactive'
+          status?: 'active' | 'inactive'
           created_at?: string
           updated_at?: string
         }
@@ -54,10 +62,10 @@ export type Database = {
           name?: string
           email?: string
           phone?: string
-          date_of_birth?: string
-          gender?: string
+          age?: number
+          gender?: 'Male' | 'Female' | 'Other'
           address?: string
-          status?: 'Active' | 'Inactive'
+          status?: 'active' | 'inactive'
           updated_at?: string
         }
       }
@@ -69,10 +77,9 @@ export type Database = {
           phone: string
           specialization: string
           experience: number
-          availability: string[]
+          status: 'Available' | 'Busy' | 'Off Duty'
           rating: number
           image_url: string | null
-          status: 'Available' | 'Busy' | 'Off Duty'
           created_at: string
           updated_at: string
         }
@@ -83,10 +90,9 @@ export type Database = {
           phone: string
           specialization: string
           experience: number
-          availability: string[]
+          status?: 'Available' | 'Busy' | 'Off Duty'
           rating?: number
           image_url?: string | null
-          status?: 'Available' | 'Busy' | 'Off Duty'
           created_at?: string
           updated_at?: string
         }
@@ -97,10 +103,9 @@ export type Database = {
           phone?: string
           specialization?: string
           experience?: number
-          availability?: string[]
+          status?: 'Available' | 'Busy' | 'Off Duty'
           rating?: number
           image_url?: string | null
-          status?: 'Available' | 'Busy' | 'Off Duty'
           updated_at?: string
         }
       }
@@ -111,11 +116,8 @@ export type Database = {
           doctor_id: string
           appointment_date: string
           appointment_time: string
-          status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'
-          reason: string
-          type: 'Consultation' | 'Follow-up' | 'Emergency' | 'Surgery' | 'Checkup'
-          priority: 'Low' | 'Medium' | 'High'
-          duration: number
+          status: 'scheduled' | 'completed' | 'cancelled' | 'no_show'
+          notes: string | null
           created_at: string
           updated_at: string
         }
@@ -125,11 +127,8 @@ export type Database = {
           doctor_id: string
           appointment_date: string
           appointment_time: string
-          status?: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'
-          reason: string
-          type?: 'Consultation' | 'Follow-up' | 'Emergency' | 'Surgery' | 'Checkup'
-          priority?: 'Low' | 'Medium' | 'High'
-          duration?: number
+          status?: 'scheduled' | 'completed' | 'cancelled' | 'no_show'
+          notes?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -139,11 +138,8 @@ export type Database = {
           doctor_id?: string
           appointment_date?: string
           appointment_time?: string
-          status?: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'
-          reason?: string
-          type?: 'Consultation' | 'Follow-up' | 'Emergency' | 'Surgery' | 'Checkup'
-          priority?: 'Low' | 'Medium' | 'High'
-          duration?: number
+          status?: 'scheduled' | 'completed' | 'cancelled' | 'no_show'
+          notes?: string | null
           updated_at?: string
         }
       }
